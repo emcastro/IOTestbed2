@@ -1,0 +1,70 @@
+@startuml
+
+start
+:Create Tables
+*""HullInfo""
+*""OwnerInfo""
+*""Position"";
+
+:Read Input CSV File;
+
+:Group by date;
+
+:For each date;
+
+split
+
+:For the 1st entry
+of the current date;
+
+if (""hullCode"" is defined) then (yes)
+    :**Select** ""HullInfo"" by ""hullCode"";
+else (no)
+endif
+
+if (Something found) then (yes)
+    :**Select** most recent
+    ""OwnerInfo"" by id de ""HullInfo"";
+    ://Update// ""HullInfo""
+    and ""OwnerInfo""
+    from CSV entry;
+    ://Add// ""Position"";
+else (no)
+    :**Select** ""OwnerInfo"" by ""radioCode"";
+    if () then (found)
+
+    else (not found)
+       :**Select** ""OwnerInfo"" by ""name"";
+    endif
+    if () then (found)
+        :**Select** ""HullInfo"" by id;
+        ://Update// ""HullInfo""
+        and ""OwnerInfo""
+        from entry;
+        ://Add// ""Position"";
+    else (not found)
+
+        :Create a completely
+        new entry in the database;
+        ://Add// ""Position"";
+    endif
+endif
+
+split again
+
+:For the 2nd entry
+of the current date;
+
+:...;
+
+split again
+
+:For the n-th entry
+of the current date;
+
+:...;
+
+end split
+
+end
+@enduml

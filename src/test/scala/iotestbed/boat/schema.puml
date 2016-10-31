@@ -1,0 +1,24 @@
+@startuml
+
+class HullInfo {
+    hullCode : <i>not null
+    length
+    width
+}
+
+class OwnerInfo {
+    date : <i>not null
+    radioCode
+    name
+    owner
+}
+
+class Position {
+    date : <i>not null
+    position : <i>not null
+}
+
+HullInfo *-- "1..1 boat" OwnerInfo
+HullInfo *-- "1..1boat      " Position
+
+@enduml

@@ -1,0 +1,14 @@
+syntax: glob
+.cache
+.classpath
+.idea
+.project
+.settings
+bin
+project/target
+target
+.classpath_nb
+.tmpBin
+.cache-main
+.cache-tests
+*.iml
