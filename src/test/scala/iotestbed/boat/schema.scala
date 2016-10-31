@@ -65,7 +65,7 @@ object Schema {
   implicit val classOfOwnerInfo = classOf[OwnerInfo]
   implicit val classOfPosition = classOf[Position]
 
-  def dump(results: Seq[(HullInfo, Vector[OwnerInfo], Vector[Position])]) = {
+  def formatDump(results: Seq[(HullInfo, Vector[OwnerInfo], Vector[Position])]) = {
     for ((hull, owners, positions) <- results) yield {
       s"""hull-code: ${hull.hullCode.getOrElse("?")} - ${hull.length.getOrElse("?")}×${hull.width.getOrElse("?")}
          |

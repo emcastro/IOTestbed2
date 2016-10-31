@@ -7,6 +7,6 @@ import org.scalatest.FunSpec
   */
 class UnorderedTest extends FunSpec {
 
-  // tester que unordered est associatif, voire commutatif
+  // TODO tester que unordered est associatif, voire commutatif
 
 }

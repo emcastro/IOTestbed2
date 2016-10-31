@@ -11,4 +11,5 @@ target
 .tmpBin
 .cache-main
 .cache-tests
+.git
 *.iml

@@ -2,19 +2,20 @@ package iotestbed.boat.monadic
 
 import iotestbed.Vectorizable._
 import iotestbed.boat.Utils._
-import iotestbed.boat.util
 import iotestbed.boat.util.Database.Row
 import org.scalatest.FunSpec
 
 class TreeTest extends FunSpec {
 
+  val db = new VecDatabase
+
   describe("Given a database containing a tree of nodes") {
 
-    util.Database.createTable(classOf[Node])
+    db.createTable(classOf[Node])
 
     val root = Node(1, 0)
 
-    util.Database.update(classOf[Node],
+    db.backend.update(classOf[Node],
       root,
 
       Node(11, 1),
@@ -38,10 +39,10 @@ class TreeTest extends FunSpec {
 
     describe("A recursive function extracting all the leaves of the tree") {
       def leaves(n: Node): Script[Seq[Node]] = {
-        import iotestbed.boat.monadic.Database._
+        import iotestbed.boat.util.Database._
 
         // It looks like a depth first search. However it behaves as de breadth first search.
-        selectValues(Node.parent === n.id) >>= {
+        db.selectValues(Node.parent === n.id) >>= {
           subNodes =>
             if (subNodes.isEmpty) done(Seq(n))
             else unordered(subNodes.sortBy(_.id).map(leaves)) >>= {
@@ -66,10 +67,10 @@ class TreeTest extends FunSpec {
       import com.thoughtworks.each.Monadic._
 
       def leaves(n: Node): Script[Seq[Node]] = {
-        import iotestbed.boat.monadic.Database._
+        import iotestbed.boat.util.Database._
 
         monadic[Script] {
-          val subNodes = selectValues(Node.parent === n.id).each
+          val subNodes = db.selectValues(Node.parent === n.id).each
           if (subNodes.isEmpty) Seq(n)
           else {
             val x = unordered(subNodes.sortBy(_.id).map(leaves)).each

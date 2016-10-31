@@ -5,24 +5,21 @@ import iotestbed.boat._
 import iotestbed.boat.util.CSVReader._
 import iotestbed.boat.util.{Criteria, Database}
 
-object VesselDatabase_Classic extends App {
+class VesselDatabase_Classic {
 
-  import Database._
   import iotestbed.boat.Schema._
 
-  val t1 = System.currentTimeMillis()
+  val db = new Database()
 
-  {
+  def run(url: String): Unit = {
 
-    createTable(classOf[HullInfo])
-    createTable(classOf[OwnerInfo])
-    createTable(classOf[Position])
+    db.createTable(classOf[HullInfo])
+    db.createTable(classOf[OwnerInfo])
+    db.createTable(classOf[Position])
 
-    // On a des sources de données qui fournissent des infos
+    def entries = read(url).toStream // does not store
 
-    def entries = read("file:data.csv").toStream // does not store
-
-    Utils.grouped(entries)(_("date")).foreach(
+    Utils.grouped(entries)(_ ("date")).foreach(
       entryGroup => {
         println(entryGroup.mkString("---", "\n   ", ""))
 
@@ -39,7 +36,7 @@ object VesselDatabase_Classic extends App {
       val name = someString(e("name"))
 
       val hullInfos = {
-        if (hullCode.isDefined) selectValues(HullInfo.hullCode === hullCode)
+        if (hullCode.isDefined) db.selectValues(HullInfo.hullCode === hullCode)
         else Seq.empty
       }
       hullInfos match {
@@ -47,41 +44,41 @@ object VesselDatabase_Classic extends App {
         case Seq(dbHullInfo) => // hullCode found
           val boatKey = dbHullInfo.id
 
-          val dbOwnerInfo = selectValues(OwnerInfo.boatKey === boatKey).sortBy(_.date).last
+          val dbOwnerInfo = db.selectValues(OwnerInfo.boatKey === boatKey).sortBy(_.date).last
           val csvOwnerInfo = OwnerInfo.fromEntry(dbOwnerInfo.id, boatKey, e)
 
-          update(classOf[OwnerInfo], (dbOwnerInfo mix csvOwnerInfo).getOrElse(csvOwnerInfo.copy(id = newKey())))
+          db.update(classOf[OwnerInfo], (dbOwnerInfo mix csvOwnerInfo).getOrElse(csvOwnerInfo.copy(id = db.newKey())))
 
           val csvHullInfo = HullInfo.fromEntry(dbHullInfo.id, e)
-          update(classOf[HullInfo], dbHullInfo update csvHullInfo)
-          update(classOf[Position], Position.fromEntry(newKey(), boatKey, e))
+          db.update(classOf[HullInfo], dbHullInfo update csvHullInfo)
+          db.update(classOf[Position], Position.fromEntry(db.newKey(), boatKey, e))
 
         case Seq() => // no hull code
-          def dbOwnerInfoFromRadioCode = ifDefined(radioCode)(selectValues(OwnerInfo.radioCode === radioCode).sortBy(_.date).lastOption)
-          def dbOwnerInfoFromName = ifDefined(name)(selectValues(OwnerInfo.name === name).sortBy(_.date).lastOption)
+          def dbOwnerInfoFromRadioCode = ifDefined(radioCode)(db.selectValues(OwnerInfo.radioCode === radioCode).sortBy(_.date).lastOption)
+          def dbOwnerInfoFromName = ifDefined(name)(db.selectValues(OwnerInfo.name === name).sortBy(_.date).lastOption)
 
           dbOwnerInfoFromRadioCode orElse dbOwnerInfoFromName match {
             case Some(dbOwnerInfo) =>
               val boatKey = dbOwnerInfo.boatKey
 
               val csvOwnerInfo = OwnerInfo.fromEntry(dbOwnerInfo.id, boatKey, e)
-              update(classOf[OwnerInfo], (dbOwnerInfo mix csvOwnerInfo).getOrElse(csvOwnerInfo.copy(id = newKey())))
+              db.update(classOf[OwnerInfo], (dbOwnerInfo mix csvOwnerInfo).getOrElse(csvOwnerInfo.copy(id = db.newKey())))
 
-              val Seq(dbHullInfo) = selectValues(HullInfo.id === boatKey)
+              val Seq(dbHullInfo) = db.selectValues(HullInfo.id === boatKey)
               val csvHullInfo = HullInfo.fromEntry(dbHullInfo.id, e)
 
-              update(classOf[HullInfo], dbHullInfo update csvHullInfo)
-              update(classOf[Position], Position.fromEntry(newKey(), boatKey, e))
+              db.update(classOf[HullInfo], dbHullInfo update csvHullInfo)
+              db.update(classOf[Position], Position.fromEntry(db.newKey(), boatKey, e))
 
             case None =>
               // Completely new entry
-              val boatKey = newKey()
+              val boatKey = db.newKey()
               val csvHullInfo = HullInfo.fromEntry(boatKey, e)
-              val csvOwnerInfo = OwnerInfo.fromEntry(newKey(), boatKey, e)
+              val csvOwnerInfo = OwnerInfo.fromEntry(db.newKey(), boatKey, e)
 
-              update(classOf[HullInfo], csvHullInfo)
-              update(classOf[OwnerInfo], csvOwnerInfo)
-              update(classOf[Position], Position.fromEntry(newKey(), boatKey, e))
+              db.update(classOf[HullInfo], csvHullInfo)
+              db.update(classOf[OwnerInfo], csvOwnerInfo)
+              db.update(classOf[Position], Position.fromEntry(db.newKey(), boatKey, e))
           }
 
         case _ =>
@@ -90,12 +87,12 @@ object VesselDatabase_Classic extends App {
     }
   }
 
-  def dump() = {
-    val hulls = selectValues(Criteria.all[HullInfo])
+  def dump = {
+    val hulls = db.selectValues(Criteria.all[HullInfo])
 
     val completeHulls = hulls.map(hull => {
-      val owners = selectValues(OwnerInfo.boatKey === hull.id)
-      val positions = selectValues(Position.boatKey === hull.id)
+      val owners = db.selectValues(OwnerInfo.boatKey === hull.id)
+      val positions = db.selectValues(Position.boatKey === hull.id)
       val sortedOwners = owners.sortBy(_.date)
       val sortedPositions = positions.sortBy(_.date)
       (hull, sortedOwners.toVector, sortedPositions.toVector)
@@ -103,15 +100,25 @@ object VesselDatabase_Classic extends App {
     completeHulls
   }
 
-  val results = dump()
+}
 
-  println(Schema.dump(results).sorted.mkString("\n-----\n"))
+object VesselDatabase_Classic_App extends App {
+
+  val vd = new VesselDatabase_Classic()
+  import vd._
+
+  val t1 = System.currentTimeMillis()
+
+  run("file:data.csv")
+
+  val results = dump
+
+  println(Schema.formatDump(results).sorted.mkString("\n-----\n"))
 
   val t2 = System.currentTimeMillis()
+
+  db.dumpStats()
 
   println((t2 - t1) / 1000.0)
 
 }
-
-
-

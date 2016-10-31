@@ -10,15 +10,13 @@ import iotestbed.util.EasyNatTrans._
 
 import scala.language.{existentials, higherKinds}
 
-object Database {
+class VecDatabase {
 
-  implicit class ImplicitCriteria[A <: Row, B](f: A => B) {
-    def ===(b: B) = EqualityCriteria[A, B](f, b)
-  }
+  val backend = new util.Database()
 
-  def newKey() = util.Database.newKey()
+  def newKey() = backend.newKey()
 
-  def createTable(table: Class[_ <: Row]) = util.Database.createTable(table) // no need to be a diehard on such database action
+  def createTable(table: Class[_ <: Row]) = backend.createTable(table) // no need to be a diehard on such database action
 
   // selectValues
 
@@ -27,7 +25,7 @@ object Database {
   private val vecSelectValue = new SetMapVectorizableFunctionFamily[Class[NRow], Criteria[NRow], Seq[NRow]](
     table => criteriaSet => {
       val extracted: Class[NRow] = table
-      util.Database.selectValues(criteriaSet)(extracted)
+      backend.selectValues(criteriaSet)(extracted)
     })
 
   def selectValues[R <: Row](criteria: Criteria[R])(implicit table: Class[R]): Script[Seq[R]] = {
@@ -38,7 +36,7 @@ object Database {
 
   private val vecUpdate = new SeqSeqVectorizableFunctionFamily[Class[NRow], ID[NRow], XUnit[NRow]](
     table => rows => {
-      util.Database.update[NRow](table, rows: _*)
+      backend.update[NRow](table, rows: _*)
       Seq.fill(rows.size)(())
     })
 
@@ -48,7 +46,7 @@ object Database {
 
   // dump
 
-  def dump() = {
+  def dump = {
     import iotestbed.boat.Schema._
 
     for {
@@ -65,6 +63,8 @@ object Database {
         } yield (hull, sortedOwners.toVector, sortedPositions.toVector)))
     } yield completeHulls
   }
+
+  def dumpStats() = backend.dumpStats()
 
   // Policy: wait at least 10 similar queries before early evaluation.
   implicit object policy extends EvaluationPolicy {

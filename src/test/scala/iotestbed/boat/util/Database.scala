@@ -1,11 +1,7 @@
 package iotestbed.boat.util
 
-import iotestbed.boat.util.Database.Row
+import iotestbed.boat.util.Database._
 
-/**
- * Let's pretend that we have a database, with high I/O cost.
- * It stores a tree of Nodes.
- */
 object Database {
 
   trait Row {
@@ -17,14 +13,20 @@ object Database {
   implicit class ImplicitCriteria[A <: Row, B](f: A => B) {
     def ===(b: B) = EqualityCriteria[A, B](f, b)
   }
+}
+
+/**
+  * Let's pretend that we have a database, with high I/O cost.
+  * It stores a tree of Nodes.
+  */
+class Database {
+
 
   type Table[R <: Row] = Map[Key, R]
 
   var tables = Map.empty[Class[_ <: Row], Table[Row]]
-
   var ioCount = 0
   var selectCount = 0
-
   var keySequence = 0
 
   def newKey() = {
@@ -80,9 +82,9 @@ object Database {
   }
 
 
-    def dump() = synchronized {
+  def dump() = synchronized {
     println("=======================================")
-    Database.tables.values.foreach(
+    tables.values.foreach(
       table => {
         println("====")
         table.values.toSeq.sortBy(_.id).foreach(
@@ -96,8 +98,8 @@ object Database {
   }
 
   def dumpStats(): Unit = {
-    println("io count: " + Database.ioCount)
-    println("select count: " + Database.selectCount)
+    println("io count: " + ioCount)
+    println("select count: " + selectCount)
   }
 }
 
